@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compound Interest Calculator</title>
+  <style>
+    :root {
+      --bg: #0d1b2a;
+      --surface: #112240;
+      --surface-2: #1a2f4e;
+      --border: #1e3a5f;
+      --accent: #00c9a7;
+      --accent-2: #00e676;
+      --text: #e8f4f8;
+      --text-muted: #7a9bb5;
+      --danger: #ff5252;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+
+    header {
+      max-width: 860px;
+      margin: 0 auto 24px;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-size: 0.9rem;
+    }
+
+    .inputs-panel {
+      max-width: 860px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .global-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input[type="number"], input[type="text"] {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 8px 12px;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+
+    input[type="number"]:focus, input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      opacity: 0.4;
+    }
+
+    .phases-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .phases-header span {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-add {
+      background: transparent;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 6px 14px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-add:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    #phases-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .phase-row {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+    }
+
+    .phase-badge {
+      background: var(--accent);
+      border-radius: 50%;
+      color: var(--bg);
+      flex-shrink: 0;
+      font-size: 0.7rem;
+      font-weight: 800;
+      height: 24px;
+      line-height: 24px;
+      text-align: center;
+      width: 24px;
+    }
+
+    .phase-label-input {
+      flex: 1.4;
+      min-width: 80px;
+    }
+
+    .phase-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 70px;
+    }
+
+    .phase-field label {
+      font-size: 0.7rem;
+    }
+
+    .btn-remove {
+      background: transparent;
+      border: 1px solid var(--danger);
+      border-radius: 6px;
+      color: var(--danger);
+      cursor: pointer;
+      flex-shrink: 0;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 5px 9px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-remove:hover:not(:disabled) {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .btn-remove:disabled {
+      border-color: var(--border);
+      color: var(--border);
+      cursor: not-allowed;
+    }
+
+    #calc-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: var(--bg);
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 700;
+      margin-top: 20px;
+      padding: 12px 28px;
+      transition: opacity 0.15s;
+      width: 100%;
+    }
+
+    #calc-btn:hover { opacity: 0.88; }
+
+    #results {
+      max-width: 860px;
+      margin: 24px auto 0;
+      display: none;
+    }
+
+    #results.visible { display: block; }
+
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .stat-card .stat-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stat-card.highlight .stat-value { color: var(--accent-2); }
+
+    .chart-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+    }
+
+    #negative-warning {
+      background: rgba(255, 82, 82, 0.12);
+      border: 1px solid var(--danger);
+      border-radius: 8px;
+      color: var(--danger);
+      display: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      padding: 10px 14px;
+    }
+
+    #negative-warning.visible { display: block; }
+
+    @media (max-width: 600px) {
+      .global-inputs {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-stats {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .phase-row {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .phase-label-input {
+        flex: 1 1 100%;
+        order: 1;
+      }
+
+      .phase-badge {
+        order: 0;
+      }
+
+      .btn-remove {
+        order: 2;
+        margin-left: auto;
+      }
+
+      .phase-field {
+        flex: 1 1 calc(50% - 5px);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Compound Interest Calculator</h1>
+  <p>Chain multiple contribution phases — add, hold, or withdraw over time.</p>
+</header>
+
+<section class="inputs-panel">
+  <div class="global-inputs">
+    <div class="field">
+      <label for="initial-amount">Initial Amount ($)</label>
+      <input type="number" id="initial-amount" value="10000" min="0" step="100">
+    </div>
+    <div class="field">
+      <label for="annual-rate">Annual Interest Rate (%)</label>
+      <input type="number" id="annual-rate" value="7" min="0" step="0.1">
+    </div>
+  </div>
+
+  <div class="phases-section">
+    <div class="phases-header">
+      <span>Phases</span>
+      <button class="btn-add" onclick="addPhase()">+ Add Step</button>
+    </div>
+    <div id="phases-list"></div>
+  </div>
+
+  <button id="calc-btn" onclick="onCalculate()">Calculate</button>
+</section>
+
+<section id="results">
+  <div id="negative-warning">
+    ⚠ Balance went negative during the simulation — consider reducing withdrawal amounts.
+  </div>
+  <div class="summary-stats">
+    <div class="stat-card highlight">
+      <div class="stat-label">Final Value</div>
+      <div class="stat-value" id="stat-final">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Initial + Contributions</div>
+      <div class="stat-value" id="stat-principal">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Net Contributions</div>
+      <div class="stat-value" id="stat-contrib">—</div>
+    </div>
+    <div class="stat-card highlight">
+      <div class="stat-label">Interest Earned</div>
+      <div class="stat-value" id="stat-interest">—</div>
+    </div>
+  </div>
+  <div class="chart-container">
+    <canvas id="chart"></canvas>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let phaseIdCounter = 0;
+  const state = {
+    phases: []
+  };
+  let chartInstance = null;
+
+  // ── Utilities ──────────────────────────────────────────────────────────────
+  function formatCurrency(v) {
+    const abs = Math.abs(v);
+    const formatted = abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (v < 0 ? '-' : '') + '$' + formatted;
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── Engine ─────────────────────────────────────────────────────────────────
+  function calculate(state) {
+    const initial = parseFloat(document.getElementById('initial-amount').value) || 0;
+    const rate = parseFloat(document.getElementById('annual-rate').value) || 0;
+
+    const rows = [];
+    let balance = initial;
+    let cumContrib = 0;
+    let year = 0;
+
+    for (const phase of state.phases) {
+      const years = Math.max(1, Math.round(phase.years));
+      const monthly = phase.monthly;
+
+      for (let y = 0; y < years; y++) {
+        year++;
+        balance = balance * (1 + rate / 100) + monthly * 12;
+        cumContrib += monthly * 12;
+        const cumInterest = balance - initial - cumContrib;
+        rows.push({ year, balance, cumContrib, cumInterest });
+      }
+    }
+
+    return rows;
+  }
+
+  // ── Summary ────────────────────────────────────────────────────────────────
+  function summarize(initialAmount, rows) {
+    if (rows.length === 0) {
+      return { finalValue: initialAmount, principal: initialAmount, netContrib: 0, interest: 0 };
+    }
+    const last = rows[rows.length - 1];
+    return {
+      finalValue: last.balance,
+      principal: initialAmount + last.cumContrib,
+      netContrib: last.cumContrib,
+      interest: last.cumInterest
+    };
+  }
+
+  // ── Chart ──────────────────────────────────────────────────────────────────
+  function renderChart(rows, initialAmount) {
+    const labels = rows.map(r => 'Yr ' + r.year);
+    const principalData = rows.map(r => initialAmount + r.cumContrib);
+    const balanceData = rows.map(r => r.balance);
+    const pointRadius = rows.length > 40 ? 0 : 3;
+
+    if (chartInstance) {
+      chartInstance.destroy();
+      chartInstance = null;
+    }
+
+    const ctx = document.getElementById('chart').getContext('2d');
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Principal + Contributions',
+            data: principalData,
+            borderColor: '#00c9a7',
+            backgroundColor: 'rgba(0,201,167,0.15)',
+            fill: true,
+            tension: 0.3,
+            pointRadius,
+            borderWidth: 2
+          },
+          {
+            label: 'Total Balance',
+            data: balanceData,
+            borderColor: '#00e676',
+            backgroundColor: 'transparent',
+            fill: false,
+            tension: 0.3,
+            pointRadius,
+            borderWidth: 2.5
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            labels: { color: '#7a9bb5', font: { size: 12 } }
+          },
+          tooltip: {
+            backgroundColor: '#112240',
+            borderColor: '#1e3a5f',
+            borderWidth: 1,
+            titleColor: '#e8f4f8',
+            bodyColor: '#7a9bb5',
+            callbacks: {
+              label: ctx => ' ' + ctx.dataset.label + ': ' + formatCurrency(ctx.parsed.y)
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#7a9bb5', font: { size: 11 } },
+            grid: { color: 'rgba(30,58,95,0.6)' }
+          },
+          y: {
+            ticks: {
+              color: '#7a9bb5',
+              font: { size: 11 },
+              callback: v => '$' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(0) + 'k' : v)
+            },
+            grid: { color: 'rgba(30,58,95,0.6)' }
+          }
+        }
+      }
+    });
+  }
+
+  // ── DOM / Phase Management ─────────────────────────────────────────────────
+  function renderPhases() {
+    const list = document.getElementById('phases-list');
+    const only = state.phases.length === 1;
+
+    list.innerHTML = state.phases.map((phase, idx) => `
+      <div class="phase-row" data-id="${phase.id}">
+        <div class="phase-badge">${idx + 1}</div>
+        <div class="phase-label-input">
+          <input type="text" value="${escapeHtml(phase.label)}"
+            placeholder="Label (optional)"
+            onchange="updatePhase(${phase.id}, 'label', this.value)">
+        </div>
+        <div class="phase-field">
+          <label>Monthly ($)</label>
+          <input type="number" value="${phase.monthly}" step="50"
+            onchange="updatePhase(${phase.id}, 'monthly', this.value)"
+            oninput="updatePhase(${phase.id}, 'monthly', this.value)">
+        </div>
+        <div class="phase-field">
+          <label>Years</label>
+          <input type="number" value="${phase.years}" min="1" step="1"
+            onchange="updatePhase(${phase.id}, 'years', this.value)"
+            oninput="updatePhase(${phase.id}, 'years', this.value)">
+        </div>
+        <button class="btn-remove" onclick="removePhase(${phase.id})" ${only ? 'disabled' : ''} title="Remove step">×</button>
+      </div>
+    `).join('');
+  }
+
+  function addPhase() {
+    phaseIdCounter++;
+    state.phases.push({ id: phaseIdCounter, label: '', monthly: 500, years: 10 });
+    renderPhases();
+  }
+
+  function removePhase(id) {
+    if (state.phases.length <= 1) return;
+    state.phases = state.phases.filter(p => p.id !== id);
+    renderPhases();
+  }
+
+  function updatePhase(id, field, val) {
+    const phase = state.phases.find(p => p.id === id);
+    if (!phase) return;
+    if (field === 'label') {
+      phase.label = val;
+    } else if (field === 'monthly') {
+      phase.monthly = parseFloat(val) || 0;
+    } else if (field === 'years') {
+      phase.years = parseFloat(val) || 1;
+    }
+  }
+
+  // ── Main Handler ───────────────────────────────────────────────────────────
+  function onCalculate() {
+    const initialAmount = parseFloat(document.getElementById('initial-amount').value) || 0;
+    const rows = calculate(state);
+    const stats = summarize(initialAmount, rows);
+
+    document.getElementById('stat-final').textContent = formatCurrency(stats.finalValue);
+    document.getElementById('stat-principal').textContent = formatCurrency(stats.principal);
+    document.getElementById('stat-contrib').textContent = formatCurrency(stats.netContrib);
+    document.getElementById('stat-interest').textContent = formatCurrency(stats.interest);
+
+    const hasNegative = rows.some(r => r.balance < 0);
+    document.getElementById('negative-warning').classList.toggle('visible', hasNegative);
+
+    if (rows.length > 0) {
+      renderChart(rows, initialAmount);
+    }
+
+    const results = document.getElementById('results');
+    results.classList.add('visible');
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  addPhase();
+</script>
+
+</body>
+</html>
