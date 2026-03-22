@@ -124,9 +124,15 @@
       transition: background 0.15s, color 0.15s;
     }
 
-    .btn-add:hover {
+    .btn-add:hover:not(:disabled) {
       background: var(--accent);
       color: var(--bg);
+    }
+
+    .btn-add:disabled {
+      border-color: var(--border);
+      color: var(--border);
+      cursor: not-allowed;
     }
 
     #phases-list {
@@ -276,6 +282,88 @@
 
     #negative-warning.visible { display: block; }
 
+    /* ── Compare Mode ──────────────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+
+    .header-top {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 16px;
+    }
+
+    #compare-toggle-btn {
+      background: transparent; border: 1px solid var(--accent);
+      border-radius: 8px; color: var(--accent); cursor: pointer;
+      font-size: 0.875rem; font-weight: 600; padding: 8px 18px;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap; flex-shrink: 0; margin-top: 4px;
+    }
+    #compare-toggle-btn:hover, #compare-toggle-btn.active {
+      background: var(--accent); color: var(--bg);
+    }
+
+    #compare-panel { max-width: 1200px; margin: 0 auto; }
+    .compare-shared-inputs {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; margin-bottom: 16px;
+    }
+    .compare-shared-inputs .global-inputs { margin-bottom: 0; }
+    .compare-toolbar { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+    #compare-calc-btn {
+      background: var(--accent); border: none; border-radius: 8px;
+      color: var(--bg); cursor: pointer; font-size: 1rem; font-weight: 700;
+      margin-top: 20px; padding: 12px 28px; transition: opacity 0.15s; width: 100%;
+    }
+    #compare-calc-btn:hover { opacity: 0.88; }
+
+    #compare-scenarios-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .scenario-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .scenario-header { display: flex; align-items: center; gap: 10px; }
+    .scenario-color-swatch { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+    .scenario-name-input {
+      flex: 1; background: transparent; border: none;
+      border-bottom: 1px solid var(--border); border-radius: 0;
+      color: var(--text); font-size: 0.95rem; font-weight: 600; padding: 4px 0;
+    }
+    .scenario-name-input:focus { border-bottom-color: var(--accent); outline: none; }
+    .btn-remove-scenario {
+      background: transparent; border: 1px solid var(--danger);
+      border-radius: 6px; color: var(--danger); cursor: pointer;
+      flex-shrink: 0; font-size: 1rem; line-height: 1; padding: 5px 9px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-remove-scenario:hover:not(:disabled) { background: var(--danger); color: #fff; }
+    .btn-remove-scenario:disabled { border-color: var(--border); color: var(--border); cursor: not-allowed; }
+
+    .scenario-global-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    #compare-summary { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .compare-stat-card {
+      flex: 1; min-width: 160px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 10px; padding: 16px;
+      border-top-width: 3px; border-top-style: solid;
+    }
+    .compare-stat-card .stat-label {
+      font-size: 0.72rem; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    .compare-stat-card .stat-value { font-size: 1.25rem; font-weight: 700; }
+    .compare-stat-card .stat-scenario-name { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; }
+
+    #results.compare-mode { max-width: 1200px; }
+
     @media (max-width: 600px) {
       .global-inputs {
         grid-template-columns: 1fr;
@@ -307,14 +395,23 @@
       .phase-field {
         flex: 1 1 calc(50% - 5px);
       }
+
+      .scenario-global-inputs {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>Compound Interest Calculator</h1>
-  <p>Chain multiple contribution phases — add, hold, or withdraw over time.</p>
+  <div class="header-top">
+    <div>
+      <h1>Compound Interest Calculator</h1>
+      <p>Chain multiple contribution phases — add, hold, or withdraw over time.</p>
+    </div>
+    <button id="compare-toggle-btn" onclick="toggleCompareMode()">Compare Scenarios</button>
+  </div>
 </header>
 
 <section class="inputs-panel">
@@ -340,11 +437,31 @@
   <button id="calc-btn" onclick="onCalculate()">Calculate</button>
 </section>
 
+<section id="compare-panel" class="hidden">
+  <div class="compare-shared-inputs">
+    <div class="global-inputs">
+      <div class="field">
+        <label for="compare-initial-amount">Initial Amount ($)</label>
+        <input type="number" id="compare-initial-amount" value="10000" min="0" step="100">
+      </div>
+      <div class="field">
+        <label for="compare-annual-rate">Annual Interest Rate (%)</label>
+        <input type="number" id="compare-annual-rate" value="7" min="0" step="0.1">
+      </div>
+    </div>
+  </div>
+  <div class="compare-toolbar">
+    <button id="add-scenario-btn" class="btn-add" onclick="addCompareScenario()">+ Add Scenario</button>
+  </div>
+  <div id="compare-scenarios-grid"></div>
+  <button id="compare-calc-btn" onclick="onCalculate()">Calculate</button>
+</section>
+
 <section id="results">
   <div id="negative-warning">
     ⚠ Balance went negative during the simulation — consider reducing withdrawal amounts.
   </div>
-  <div class="summary-stats">
+  <div id="normal-summary" class="summary-stats">
     <div class="stat-card highlight">
       <div class="stat-label">Final Value</div>
       <div class="stat-value" id="stat-final">—</div>
@@ -362,6 +479,7 @@
       <div class="stat-value" id="stat-interest">—</div>
     </div>
   </div>
+  <div id="compare-summary" class="hidden"></div>
   <div class="chart-container">
     <canvas id="chart"></canvas>
   </div>
@@ -375,6 +493,12 @@
     phases: []
   };
   let chartInstance = null;
+
+  const SCENARIO_COLORS = ['#00c9a7', '#ff9f43', '#a29bfe'];
+  let compareMode = false;
+  let normalModeSnapshot = null;
+  let comparePhaseIdCounter = 1000;
+  const compareScenarios = [];
 
   // ── Utilities ──────────────────────────────────────────────────────────────
   function formatCurrency(v) {
@@ -392,24 +516,21 @@
   }
 
   // ── Engine ─────────────────────────────────────────────────────────────────
-  function calculate(state) {
-    const initial = parseFloat(document.getElementById('initial-amount').value) || 0;
-    const rate = parseFloat(document.getElementById('annual-rate').value) || 0;
-
+  function calculate(initialAmount, annualRate, phases) {
     const rows = [];
-    let balance = initial;
+    let balance = initialAmount;
     let cumContrib = 0;
     let year = 0;
 
-    for (const phase of state.phases) {
+    for (const phase of phases) {
       const years = Math.max(1, Math.round(phase.years));
       const monthly = phase.monthly;
 
       for (let y = 0; y < years; y++) {
         year++;
-        balance = balance * (1 + rate / 100) + monthly * 12;
+        balance = balance * (1 + annualRate / 100) + monthly * 12;
         cumContrib += monthly * 12;
-        const cumInterest = balance - initial - cumContrib;
+        const cumInterest = balance - initialAmount - cumContrib;
         rows.push({ year, balance, cumContrib, cumInterest });
       }
     }
@@ -507,6 +628,73 @@
     });
   }
 
+  function renderChartCompare(results) {
+    const maxYears = Math.max(...results.map(r => r.rows.length));
+    const labels = Array.from({ length: maxYears }, (_, i) => 'Yr ' + (i + 1));
+    const pointRadius = maxYears > 40 ? 0 : 3;
+
+    if (chartInstance) {
+      chartInstance.destroy();
+      chartInstance = null;
+    }
+
+    const datasets = results.map((result, idx) => {
+      const data = Array.from({ length: maxYears }, (_, i) =>
+        i < result.rows.length ? result.rows[i].balance : null
+      );
+      return {
+        label: result.scenario.label || ('Scenario ' + (idx + 1)),
+        data,
+        borderColor: SCENARIO_COLORS[idx],
+        backgroundColor: 'transparent',
+        fill: false,
+        tension: 0.3,
+        pointRadius,
+        borderWidth: 2.5,
+        spanGaps: false
+      };
+    });
+
+    const ctx = document.getElementById('chart').getContext('2d');
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            labels: { color: '#7a9bb5', font: { size: 12 } }
+          },
+          tooltip: {
+            backgroundColor: '#112240',
+            borderColor: '#1e3a5f',
+            borderWidth: 1,
+            titleColor: '#e8f4f8',
+            bodyColor: '#7a9bb5',
+            callbacks: {
+              label: ctx => ' ' + ctx.dataset.label + ': ' + (ctx.parsed.y != null ? formatCurrency(ctx.parsed.y) : '—')
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#7a9bb5', font: { size: 11 } },
+            grid: { color: 'rgba(30,58,95,0.6)' }
+          },
+          y: {
+            ticks: {
+              color: '#7a9bb5',
+              font: { size: 11 },
+              callback: v => '$' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(0) + 'k' : v)
+            },
+            grid: { color: 'rgba(30,58,95,0.6)' }
+          }
+        }
+      }
+    });
+  }
+
   // ── DOM / Phase Management ─────────────────────────────────────────────────
   function renderPhases() {
     const list = document.getElementById('phases-list');
@@ -561,10 +749,230 @@
     }
   }
 
+  // ── Compare Mode Phase Management ──────────────────────────────────────────
+  function renderCompareScenarios() {
+    const grid = document.getElementById('compare-scenarios-grid');
+    const only = compareScenarios.length === 1;
+
+    grid.innerHTML = compareScenarios.map((scenario, sIdx) => {
+      const color = SCENARIO_COLORS[sIdx];
+      const onlyPhase = scenario.phases.length === 1;
+
+      const phasesHtml = scenario.phases.map((phase, pIdx) => `
+        <div class="phase-row" data-id="${phase.id}">
+          <div class="phase-badge" style="background:${color}">${pIdx + 1}</div>
+          <div class="phase-label-input">
+            <input type="text" value="${escapeHtml(phase.label)}"
+              placeholder="Label (optional)"
+              onchange="updateComparePhase(${scenario.id}, ${phase.id}, 'label', this.value)">
+          </div>
+          <div class="phase-field">
+            <label>Monthly ($)</label>
+            <input type="number" value="${phase.monthly}" step="50"
+              onchange="updateComparePhase(${scenario.id}, ${phase.id}, 'monthly', this.value)"
+              oninput="updateComparePhase(${scenario.id}, ${phase.id}, 'monthly', this.value)">
+          </div>
+          <div class="phase-field">
+            <label>Years</label>
+            <input type="number" value="${phase.years}" min="1" step="1"
+              onchange="updateComparePhase(${scenario.id}, ${phase.id}, 'years', this.value)"
+              oninput="updateComparePhase(${scenario.id}, ${phase.id}, 'years', this.value)">
+          </div>
+          <button class="btn-remove" onclick="removeComparePhase(${scenario.id}, ${phase.id})" ${onlyPhase ? 'disabled' : ''} title="Remove step">×</button>
+        </div>
+      `).join('');
+
+      return `
+        <div class="scenario-card">
+          <div class="scenario-header">
+            <div class="scenario-color-swatch" style="background:${color}"></div>
+            <input class="scenario-name-input" type="text" value="${escapeHtml(scenario.label)}"
+              placeholder="Scenario name"
+              onchange="updateCompareScenario(${scenario.id}, 'label', this.value)">
+            <button class="btn-remove-scenario" onclick="removeCompareScenario(${scenario.id})" ${only ? 'disabled' : ''} title="Remove scenario">×</button>
+          </div>
+          <div class="phases-section">
+            <div class="phases-header">
+              <span>Phases</span>
+              <button class="btn-add" onclick="addComparePhase(${scenario.id})">+ Add Step</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">${phasesHtml}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const addBtn = document.getElementById('add-scenario-btn');
+    addBtn.disabled = compareScenarios.length >= 3;
+  }
+
+  function addCompareScenario() {
+    if (compareScenarios.length >= 3) return;
+    comparePhaseIdCounter++;
+    const id = Date.now();
+    compareScenarios.push({
+      id,
+      label: 'Scenario ' + (compareScenarios.length + 1),
+      phases: [{ id: comparePhaseIdCounter, label: '', monthly: 500, years: 10 }]
+    });
+    renderCompareScenarios();
+  }
+
+  function removeCompareScenario(id) {
+    if (compareScenarios.length <= 1) return;
+    const idx = compareScenarios.findIndex(s => s.id === id);
+    if (idx === -1) return;
+    compareScenarios.splice(idx, 1);
+    renderCompareScenarios();
+  }
+
+  function addComparePhase(scenarioId) {
+    const scenario = compareScenarios.find(s => s.id === scenarioId);
+    if (!scenario) return;
+    comparePhaseIdCounter++;
+    scenario.phases.push({ id: comparePhaseIdCounter, label: '', monthly: 500, years: 10 });
+    renderCompareScenarios();
+  }
+
+  function removeComparePhase(scenarioId, phaseId) {
+    const scenario = compareScenarios.find(s => s.id === scenarioId);
+    if (!scenario || scenario.phases.length <= 1) return;
+    scenario.phases = scenario.phases.filter(p => p.id !== phaseId);
+    renderCompareScenarios();
+  }
+
+  function updateCompareScenario(scenarioId, field, val) {
+    const scenario = compareScenarios.find(s => s.id === scenarioId);
+    if (!scenario) return;
+    if (field === 'label') {
+      scenario.label = val;
+    }
+  }
+
+  function updateComparePhase(scenarioId, phaseId, field, val) {
+    const scenario = compareScenarios.find(s => s.id === scenarioId);
+    if (!scenario) return;
+    const phase = scenario.phases.find(p => p.id === phaseId);
+    if (!phase) return;
+    if (field === 'label') {
+      phase.label = val;
+    } else if (field === 'monthly') {
+      phase.monthly = parseFloat(val) || 0;
+    } else if (field === 'years') {
+      phase.years = parseFloat(val) || 1;
+    }
+  }
+
+  // ── Compare Mode Summary ───────────────────────────────────────────────────
+  function renderSummaryCompare(results) {
+    const container = document.getElementById('compare-summary');
+    container.innerHTML = results.map((result, idx) => {
+      const color = SCENARIO_COLORS[idx];
+      return `
+        <div class="compare-stat-card" style="border-top-color: ${color}">
+          <div class="stat-label">Final Value</div>
+          <div class="stat-value" style="color: ${color}">${formatCurrency(result.stats.finalValue)}</div>
+          <div class="stat-scenario-name">${escapeHtml(result.scenario.label || ('Scenario ' + (idx + 1)))}</div>
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('normal-summary').classList.add('hidden');
+    container.classList.remove('hidden');
+  }
+
+  // ── Compare Mode Calculate ─────────────────────────────────────────────────
+  function onCalculateCompare() {
+    const initialAmount = parseFloat(document.getElementById('compare-initial-amount').value) || 0;
+    const annualRate    = parseFloat(document.getElementById('compare-annual-rate').value) || 0;
+    const results = compareScenarios.map(scenario => {
+      const rows = calculate(initialAmount, annualRate, scenario.phases);
+      const stats = summarize(initialAmount, rows);
+      return { scenario, rows, stats };
+    });
+
+    const hasNegative = results.some(r => r.rows.some(row => row.balance < 0));
+    document.getElementById('negative-warning').classList.toggle('visible', hasNegative);
+
+    renderChartCompare(results);
+    renderSummaryCompare(results);
+
+    const resultsEl = document.getElementById('results');
+    resultsEl.classList.add('visible', 'compare-mode');
+  }
+
+  // ── Compare Mode Toggle ────────────────────────────────────────────────────
+  function toggleCompareMode() {
+    compareMode = !compareMode;
+    const btn = document.getElementById('compare-toggle-btn');
+    const inputsPanel = document.querySelector('.inputs-panel');
+    const comparePanel = document.getElementById('compare-panel');
+    const resultsEl = document.getElementById('results');
+
+    if (compareMode) {
+      // Save snapshot of current normal mode state
+      normalModeSnapshot = {
+        initialAmount: parseFloat(document.getElementById('initial-amount').value) || 0,
+        annualRate: parseFloat(document.getElementById('annual-rate').value) || 0,
+        phases: state.phases.map(p => ({ ...p }))
+      };
+
+      // Seed shared inputs from snapshot
+      document.getElementById('compare-initial-amount').value = normalModeSnapshot.initialAmount;
+      document.getElementById('compare-annual-rate').value = normalModeSnapshot.annualRate;
+
+      // Seed compare scenarios from snapshot
+      compareScenarios.length = 0;
+      comparePhaseIdCounter++;
+      compareScenarios.push({
+        id: Date.now(),
+        label: 'Scenario 1',
+        phases: normalModeSnapshot.phases.map(p => ({ ...p, id: comparePhaseIdCounter++ }))
+      });
+
+      // Update UI
+      btn.textContent = 'Exit Compare';
+      btn.classList.add('active');
+      inputsPanel.classList.add('hidden');
+      comparePanel.classList.remove('hidden');
+      resultsEl.classList.remove('visible', 'compare-mode');
+
+      // Reset chart
+      if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+      renderCompareScenarios();
+    } else {
+      // Restore normal mode
+      btn.textContent = 'Compare Scenarios';
+      btn.classList.remove('active');
+      inputsPanel.classList.remove('hidden');
+      comparePanel.classList.add('hidden');
+      resultsEl.classList.remove('visible', 'compare-mode');
+
+      // Restore snapshot
+      if (normalModeSnapshot) {
+        document.getElementById('initial-amount').value = normalModeSnapshot.initialAmount;
+        document.getElementById('annual-rate').value = normalModeSnapshot.annualRate;
+        state.phases = normalModeSnapshot.phases.map(p => ({ ...p }));
+        renderPhases();
+      }
+
+      // Restore summary visibility
+      document.getElementById('normal-summary').classList.remove('hidden');
+      document.getElementById('compare-summary').classList.add('hidden');
+
+      // Destroy compare chart
+      if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    }
+  }
+
   // ── Main Handler ───────────────────────────────────────────────────────────
   function onCalculate() {
+    if (compareMode) { onCalculateCompare(); return; }
+
     const initialAmount = parseFloat(document.getElementById('initial-amount').value) || 0;
-    const rows = calculate(state);
+    const annualRate    = parseFloat(document.getElementById('annual-rate').value) || 0;
+    const rows = calculate(initialAmount, annualRate, state.phases);
     const stats = summarize(initialAmount, rows);
 
     document.getElementById('stat-final').textContent = formatCurrency(stats.finalValue);
