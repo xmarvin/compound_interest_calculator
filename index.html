@@ -57,9 +57,16 @@
 
     .global-inputs {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 16px;
       margin-bottom: 24px;
+    }
+
+    .tax-hint {
+      font-size: 0.75rem;
+      color: var(--accent);
+      margin-top: 4px;
+      min-height: 1em;
     }
 
     .field {
@@ -455,6 +462,11 @@
       <label for="annual-rate">Annual Interest Rate (%)</label>
       <input type="number" id="annual-rate" value="7" min="0" step="0.1">
     </div>
+    <div class="field">
+      <label for="tax-rate">Withdrawal Tax Rate (%)</label>
+      <input type="number" id="tax-rate" value="23" min="0" max="100" step="1"
+        oninput="refreshTaxHints()" onchange="refreshTaxHints()">
+    </div>
   </div>
 
   <div class="phases-section">
@@ -490,6 +502,11 @@
       <div class="field">
         <label for="compare-annual-rate">Annual Interest Rate (%)</label>
         <input type="number" id="compare-annual-rate" value="7" min="0" step="0.1">
+      </div>
+      <div class="field">
+        <label for="compare-tax-rate">Withdrawal Tax Rate (%)</label>
+        <input type="number" id="compare-tax-rate" value="23" min="0" max="100" step="1"
+          oninput="refreshTaxHints()" onchange="refreshTaxHints()">
       </div>
     </div>
   </div>
@@ -556,6 +573,30 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function getTaxRate() {
+    const id = compareMode ? 'compare-tax-rate' : 'tax-rate';
+    return (parseFloat(document.getElementById(id)?.value) || 0) / 100;
+  }
+
+  function updateTaxHint(inputEl) {
+    const hint = inputEl.parentNode.querySelector('.tax-hint');
+    if (!hint) return;
+    const monthly = parseFloat(inputEl.value) || 0;
+    const taxRate = getTaxRate();
+    if (monthly < 0) {
+      const net = monthly * (1 - taxRate);
+      hint.textContent = `after tax: $${Math.abs(net).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    } else {
+      hint.textContent = '';
+    }
+  }
+
+  function refreshTaxHints() {
+    document.querySelectorAll('.phase-row input[type="number"]').forEach(input => {
+      if (input.parentNode.querySelector('.tax-hint')) updateTaxHint(input);
+    });
   }
 
   // ── Engine ─────────────────────────────────────────────────────────────────
@@ -760,8 +801,9 @@
         <div class="phase-field">
           <label>Monthly ($)</label>
           <input type="number" value="${phase.monthly}" step="50"
-            onchange="updatePhase(${phase.id}, 'monthly', this.value)"
-            oninput="updatePhase(${phase.id}, 'monthly', this.value)">
+            onchange="updatePhase(${phase.id}, 'monthly', this.value); updateTaxHint(this)"
+            oninput="updatePhase(${phase.id}, 'monthly', this.value); updateTaxHint(this)">
+          <div class="tax-hint">${phase.monthly < 0 ? `after tax: $${Math.abs(phase.monthly * (1 - getTaxRate())).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}</div>
         </div>
         <div class="phase-field">
           <label>Years</label>
@@ -818,8 +860,9 @@
           <div class="phase-field">
             <label>Monthly ($)</label>
             <input type="number" value="${phase.monthly}" step="50"
-              onchange="updateComparePhase(${scenario.id}, ${phase.id}, 'monthly', this.value)"
-              oninput="updateComparePhase(${scenario.id}, ${phase.id}, 'monthly', this.value)">
+              onchange="updateComparePhase(${scenario.id}, ${phase.id}, 'monthly', this.value); updateTaxHint(this)"
+              oninput="updateComparePhase(${scenario.id}, ${phase.id}, 'monthly', this.value); updateTaxHint(this)">
+            <div class="tax-hint">${phase.monthly < 0 ? `after tax: $${Math.abs(phase.monthly * (1 - getTaxRate())).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}</div>
           </div>
           <div class="phase-field">
             <label>Years</label>
@@ -969,6 +1012,7 @@
       // Seed shared inputs from snapshot
       document.getElementById('compare-initial-amount').value = normalModeSnapshot.initialAmount;
       document.getElementById('compare-annual-rate').value = normalModeSnapshot.annualRate;
+      document.getElementById('compare-tax-rate').value = document.getElementById('tax-rate').value;
 
       // Seed compare scenarios from snapshot
       compareScenarios.length = 0;
@@ -1002,6 +1046,7 @@
       if (normalModeSnapshot) {
         document.getElementById('initial-amount').value = normalModeSnapshot.initialAmount;
         document.getElementById('annual-rate').value = normalModeSnapshot.annualRate;
+        document.getElementById('tax-rate').value = document.getElementById('compare-tax-rate').value;
         state.phases = normalModeSnapshot.phases.map(p => ({ ...p }));
         renderPhases();
       }
