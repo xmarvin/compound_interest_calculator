@@ -212,6 +212,41 @@
       cursor: not-allowed;
     }
 
+    .phase-insert {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .phase-insert::before,
+    .phase-insert::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .btn-insert {
+      background: transparent;
+      border: 1px solid var(--accent);
+      border-radius: 50%;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      height: 22px;
+      width: 22px;
+      line-height: 1;
+      padding: 0;
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-insert:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
     .age-toggle-row {
       display: flex;
       align-items: center;
@@ -472,7 +507,6 @@
   <div class="phases-section">
     <div class="phases-header">
       <span>Phases</span>
-      <button class="btn-add" onclick="addPhase()">+ Add Step</button>
     </div>
     <div id="phases-list"></div>
   </div>
@@ -813,12 +847,22 @@
         </div>
         <button class="btn-remove" onclick="removePhase(${phase.id})" ${only ? 'disabled' : ''} title="Remove step">×</button>
       </div>
+      <div class="phase-insert">
+        <button class="btn-insert" onclick="addPhaseAfter(${phase.id})" title="Add step here">+</button>
+      </div>
     `).join('');
   }
 
   function addPhase() {
     phaseIdCounter++;
     state.phases.push({ id: phaseIdCounter, label: '', monthly: 500, years: 10 });
+    renderPhases();
+  }
+
+  function addPhaseAfter(id) {
+    phaseIdCounter++;
+    const idx = state.phases.findIndex(p => p.id === id);
+    state.phases.splice(idx + 1, 0, { id: phaseIdCounter, label: '', monthly: 500, years: 10 });
     renderPhases();
   }
 
@@ -872,6 +916,9 @@
           </div>
           <button class="btn-remove" onclick="removeComparePhase(${scenario.id}, ${phase.id})" ${onlyPhase ? 'disabled' : ''} title="Remove step">×</button>
         </div>
+        <div class="phase-insert">
+          <button class="btn-insert" onclick="addComparePhaseAfter(${scenario.id}, ${phase.id})" title="Add step here">+</button>
+        </div>
       `).join('');
 
       return `
@@ -886,7 +933,6 @@
           <div class="phases-section">
             <div class="phases-header">
               <span>Phases</span>
-              <button class="btn-add" onclick="addComparePhase(${scenario.id})">+ Add Step</button>
             </div>
             <div style="display:flex;flex-direction:column;gap:10px">${phasesHtml}</div>
           </div>
@@ -923,6 +969,15 @@
     if (!scenario) return;
     comparePhaseIdCounter++;
     scenario.phases.push({ id: comparePhaseIdCounter, label: '', monthly: 500, years: 10 });
+    renderCompareScenarios();
+  }
+
+  function addComparePhaseAfter(scenarioId, phaseId) {
+    const scenario = compareScenarios.find(s => s.id === scenarioId);
+    if (!scenario) return;
+    comparePhaseIdCounter++;
+    const idx = scenario.phases.findIndex(p => p.id === phaseId);
+    scenario.phases.splice(idx + 1, 0, { id: comparePhaseIdCounter, label: '', monthly: 500, years: 10 });
     renderCompareScenarios();
   }
 
