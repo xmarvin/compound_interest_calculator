@@ -581,8 +581,10 @@
     ⚠ Balance went negative during the simulation — consider reducing withdrawal amounts.
   </div>
   <div id="mc-note">
-    <strong>Monte Carlo mode:</strong> 10,000 simulated paths of S&amp;P 500 annual returns
-    (mean ≈ 10%, std-dev ≈ 17%, capped to ±30%). The shaded band spans the
+    <strong>Monte Carlo mode:</strong> 10,000 simulated paths of S&amp;P 500 annual returns,
+    <strong>inflation-adjusted</strong> (real mean ≈ 6.8% = ~10% nominal − ~3% inflation,
+    std-dev ≈ 17%, capped to ±30%). All figures are in <strong>today's dollars</strong>, and
+    assume contributions keep pace with inflation. The shaded band spans the
     <strong>pessimistic (10th percentile)</strong> to <strong>optimistic (90th percentile)</strong>
     outcomes; the bold line is the <strong>median</strong>.
   </div>
@@ -689,7 +691,9 @@
 
   // ── Monte Carlo (S&P 500) ──────────────────────────────────────────────────
   const MC_RUNS = 10000;
-  const MC_MEAN = 10;    // % — historical S&P 500 long-run annual return
+  // Real (inflation-adjusted) return: ~10% nominal S&P 500 minus ~3% inflation,
+  // i.e. (1.10 / 1.03) - 1 ≈ 6.8%. Results are therefore in today's dollars.
+  const MC_MEAN = 6.8;   // % — real long-run annual return (inflation-adjusted)
   const MC_STD  = 17;    // % — historical annual volatility
   const MC_MIN  = -30;   // % — clamp floor
   const MC_MAX  = 30;    // % — clamp ceiling
