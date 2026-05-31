@@ -585,7 +585,7 @@
     <strong>inflation-adjusted</strong> (real mean ≈ 6.8% = ~10% nominal − ~3% inflation,
     std-dev ≈ 17%, capped to ±30%). All figures are in <strong>today's dollars</strong>, and
     assume contributions keep pace with inflation. The shaded band spans the
-    <strong>pessimistic (10th percentile)</strong> to <strong>optimistic (90th percentile)</strong>
+    <strong>pessimistic (20th percentile)</strong> to <strong>optimistic (80th percentile)</strong>
     outcomes; the bold line is the <strong>median</strong>.
   </div>
   <div id="normal-summary" class="summary-stats">
@@ -725,7 +725,7 @@
     return sorted[lo] * (hi - idx) + sorted[hi] * (idx - lo);
   }
 
-  // Run MC_RUNS simulations and return per-year P10/P50/P90 balance bands.
+  // Run MC_RUNS simulations and return per-year P20/P50/P80 balance bands.
   function calculateMonteCarlo(initialAmount, phases) {
     const yearlyContrib = [];
     for (const phase of phases) {
@@ -750,15 +750,15 @@
     let c = 0;
     for (let i = 0; i < totalYears; i++) { c += yearlyContrib[i]; cumContrib.push(c); }
 
-    const p10 = [], p50 = [], p90 = [];
+    const p20 = [], p50 = [], p80 = [];
     for (let i = 0; i < totalYears; i++) {
       const sorted = balancesByYear[i].slice().sort(); // Float64Array sorts numerically
-      p10.push(percentileSorted(sorted, 10));
+      p20.push(percentileSorted(sorted, 20));
       p50.push(percentileSorted(sorted, 50));
-      p90.push(percentileSorted(sorted, 90));
+      p80.push(percentileSorted(sorted, 80));
     }
 
-    return { totalYears, p10, p50, p90, cumContrib };
+    return { totalYears, p20, p50, p80, cumContrib };
   }
 
   // Shared X-axis labels (respects the "show age" toggle).
@@ -948,10 +948,10 @@
       data: {
         labels,
         datasets: [
-          // P10 first so the P90 dataset can fill down to it (forms the band).
+          // P20 first so the P80 dataset can fill down to it (forms the band).
           {
-            label: 'Pessimistic (P10)',
-            data: mc.p10,
+            label: 'Pessimistic (P20)',
+            data: mc.p20,
             borderColor: '#ff5252',
             backgroundColor: 'transparent',
             fill: false,
@@ -960,8 +960,8 @@
             borderWidth: 2
           },
           {
-            label: 'Optimistic (P90)',
-            data: mc.p90,
+            label: 'Optimistic (P80)',
+            data: mc.p80,
             borderColor: '#00e676',
             backgroundColor: 'rgba(0,201,167,0.12)',
             fill: '-1',
@@ -1362,18 +1362,18 @@
 
     const last = mc.totalYears - 1;
     const finalMedian = mc.p50[last];
-    const finalPess   = mc.p10[last];
-    const finalOpt    = mc.p90[last];
+    const finalPess   = mc.p20[last];
+    const finalOpt    = mc.p80[last];
     const netContrib  = mc.cumContrib[last];
 
-    setStatLabels('Median Final (P50)', 'Pessimistic (P10)', 'Optimistic (P90)', 'Net Contributions');
+    setStatLabels('Median Final (P50)', 'Pessimistic (P20)', 'Optimistic (P80)', 'Net Contributions');
     document.getElementById('stat-final').textContent = formatCurrency(finalMedian);
     document.getElementById('stat-principal').textContent = formatCurrency(finalPess);
     document.getElementById('stat-contrib').textContent = formatCurrency(finalOpt);
     document.getElementById('stat-interest').textContent = formatCurrency(netContrib);
 
     // Warn when even the pessimistic path dips below zero at any point.
-    const hasNegative = mc.p10.some(v => v < 0);
+    const hasNegative = mc.p20.some(v => v < 0);
     document.getElementById('negative-warning').classList.toggle('visible', hasNegative);
     document.getElementById('mc-note').classList.add('visible');
 
